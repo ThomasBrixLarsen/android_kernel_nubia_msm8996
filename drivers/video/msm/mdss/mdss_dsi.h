@@ -393,6 +393,16 @@ struct dsi_err_container {
 #define MDSS_DSI_COMMAND_COMPRESSION_MODE_CTRL3	0x02b0
 #define MSM_DBA_CHIP_NAME_MAX_LEN				20
 
+//add by nubia cai colortmp
+#ifdef CONFIG_NUBIA_LCD_DISP_PREFERENCE
+struct nubia_mdp_colortmp{
+	int defult;
+	int red;
+	int green;
+	int blue;
+};
+#endif
+
 struct mdss_dsi_ctrl_pdata {
 	int ndx;	/* panel_num */
 	int (*on) (struct mdss_panel_data *pdata);
@@ -433,6 +443,9 @@ struct mdss_dsi_ctrl_pdata {
 	int bklt_en_gpio;
 	int mode_gpio;
 	int bklt_ctrl;	/* backlight ctrl */
+#ifdef CONFIG_NUBIA_LCD_BACKLIGHT_CURVE
+	uint32_t backlight_curve[256];
+#endif
 	bool pwm_pmi;
 	int pwm_period;
 	int pwm_pmic_gpio;
@@ -468,6 +481,41 @@ struct mdss_dsi_ctrl_pdata {
 	struct dsi_panel_cmds post_panel_on_cmds;
 	struct dsi_panel_cmds off_cmds;
 	struct dsi_panel_cmds status_cmds;
+
+//add by nubia cai colortmp
+#ifdef CONFIG_NUBIA_LCD_DISP_PREFERENCE
+	struct dsi_panel_cmds ce_cmds_off;
+	struct dsi_panel_cmds ce_cmds_soft;
+	struct dsi_panel_cmds ce_cmds_std;
+	struct dsi_panel_cmds ce_cmds_glow;
+
+	struct dsi_panel_cmds cabc_cmds_off;
+	struct dsi_panel_cmds cabc_cmds_lever1;
+	struct dsi_panel_cmds cabc_cmds_lever2;
+	struct dsi_panel_cmds cabc_cmds_lever3;
+
+	struct dsi_panel_cmds ce_cabc_cmds0;
+	struct dsi_panel_cmds ce_cabc_cmds1;
+	struct dsi_panel_cmds ce_cabc_cmds2;
+	struct dsi_panel_cmds ce_cabc_cmds3;
+	struct dsi_panel_cmds ce_cabc_cmds4;
+	struct dsi_panel_cmds ce_cabc_cmds5;
+	struct dsi_panel_cmds ce_cabc_cmds6;
+	struct dsi_panel_cmds ce_cabc_cmds7;
+	struct dsi_panel_cmds ce_cabc_cmds8;
+	struct dsi_panel_cmds ce_cabc_cmds9;
+	struct dsi_panel_cmds ce_cabc_cmds10;
+	struct dsi_panel_cmds ce_cabc_cmds11;
+	struct dsi_panel_cmds ce_cabc_cmds12;
+	struct dsi_panel_cmds ce_cabc_cmds13;
+	struct dsi_panel_cmds ce_cabc_cmds14;
+	struct dsi_panel_cmds ce_cabc_cmds15;
+
+	struct nubia_mdp_colortmp nubia_mdp_colortmp_warm;
+	struct nubia_mdp_colortmp nubia_mdp_colortmp_natural;
+	struct nubia_mdp_colortmp nubia_mdp_colortmp_cool;
+#endif
+
 	u32 *status_valid_params;
 	u32 *status_cmds_rlen;
 	u32 *status_value;
