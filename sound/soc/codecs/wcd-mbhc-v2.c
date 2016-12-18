@@ -241,7 +241,9 @@ static int wcd_event_notify(struct notifier_block *self, unsigned long val,
 	struct snd_soc_codec *codec = mbhc->codec;
 	bool micbias2 = false;
 	bool micbias1 = false;
+#ifndef CONFIG_ZTEMT_AUDIO
 	u8 fsm_en;
+#endif
 
 	pr_debug("%s: event %s (%d)\n", __func__,
 		 wcd_mbhc_get_event_string(event), event);
@@ -283,10 +285,12 @@ static int wcd_event_notify(struct notifier_block *self, unsigned long val,
 out_micb_en:
 		/* Disable current source if micbias enabled */
 		if (mbhc->mbhc_cb->mbhc_micbias_control) {
+#ifndef CONFIG_ZTEMT_AUDIO
 			WCD_MBHC_REG_READ(WCD_MBHC_FSM_EN, fsm_en);
 			if (fsm_en)
 				WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_BTN_ISRC_CTL,
 							 0);
+#endif
 		} else {
 			mbhc->is_hs_recording = true;
 			wcd_enable_curr_micbias(mbhc, WCD_MBHC_EN_MB);
@@ -296,6 +300,7 @@ out_micb_en:
 			mbhc->mbhc_cb->set_cap_mode(codec, micbias1, true);
 		break;
 	case WCD_EVENT_PRE_MICBIAS_2_OFF:
+#ifndef CONFIG_ZTEMT_AUDIO
 		/*
 		 * Before MICBIAS_2 is turned off, if FSM is enabled,
 		 * make sure current source is enabled so as to detect
@@ -308,6 +313,7 @@ out_micb_en:
 				WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_BTN_ISRC_CTL,
 							 3);
 		}
+#endif
 		break;
 	/* MICBIAS usage change */
 	case WCD_EVENT_POST_DAPM_MICBIAS_2_OFF:
@@ -840,6 +846,10 @@ static void wcd_mbhc_find_plug_and_report(struct wcd_mbhc *mbhc,
 		 * If Headphone was reported previously, this will
 		 * only report the mic line
 		 */
+#ifdef CONFIG_ZTEMT_AUDIO
+		if (mbhc->current_plug == MBHC_PLUG_TYPE_HEADPHONE)
+			wcd_mbhc_report_plug(mbhc, 0, SND_JACK_HEADPHONE);
+#endif
 		wcd_mbhc_report_plug(mbhc, 1, jack_type);
 	} else if (plug_type == MBHC_PLUG_TYPE_HIGH_HPH) {
 		if (mbhc->mbhc_cfg->detect_extn_cable) {
@@ -851,6 +861,11 @@ static void wcd_mbhc_find_plug_and_report(struct wcd_mbhc *mbhc,
 			/* Disable HW FSM and current source */
 			WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_FSM_EN, 0);
 			WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_BTN_ISRC_CTL, 0);
+#ifdef CONFIG_ZTEMT_AUDIO
+			mbhc->mbhc_cb->mbhc_micbias_control(mbhc->codec,
+				MIC_BIAS_2,
+				MICB_PULLUP_DISABLE);
+#endif
 			/* Setup for insertion detection */
 			WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_ELECT_DETECTION_TYPE,
 						 1);
@@ -871,6 +886,9 @@ static void wcd_mbhc_find_plug_and_report(struct wcd_mbhc *mbhc,
 	}
 exit:
 	pr_debug("%s: leave\n", __func__);
+#ifdef CONFIG_ZTEMT_AUDIO
+	pr_info("%s: current_plug %d\n", __func__,mbhc->current_plug);
+#endif
 }
 
 /* To determine if cross connection occured */
@@ -914,7 +932,11 @@ static int wcd_check_cross_conn(struct wcd_mbhc *mbhc)
 	WCD_MBHC_REG_READ(WCD_MBHC_HPHL_SCHMT_RESULT, hphl_sch_res);
 	WCD_MBHC_REG_READ(WCD_MBHC_HPHR_SCHMT_RESULT, hphr_sch_res);
 	if (!(hphl_sch_res || hphr_sch_res)) {
+#ifdef CONFIG_ZTEMT_AUDIO
+		plug_type = MBHC_PLUG_TYPE_HEADSET;
+#else
 		plug_type = MBHC_PLUG_TYPE_GND_MIC_SWAP;
+#endif
 		pr_debug("%s: Cross connection identified\n", __func__);
 	} else {
 		pr_debug("%s: No Cross connection found\n", __func__);
@@ -1019,18 +1041,26 @@ static bool wcd_is_special_headset(struct wcd_mbhc *mbhc)
 static void wcd_mbhc_update_fsm_source(struct wcd_mbhc *mbhc,
 				       enum wcd_mbhc_plug_type plug_type)
 {
+#ifndef CONFIG_ZTEMT_AUDIO
 	bool micbias2;
 
 	micbias2 = mbhc->mbhc_cb->micbias_enable_status(mbhc,
 							MIC_BIAS_2);
+#endif
 	switch (plug_type) {
 	case MBHC_PLUG_TYPE_HEADPHONE:
 		WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_BTN_ISRC_CTL, 3);
 		break;
 	case MBHC_PLUG_TYPE_HEADSET:
 	case MBHC_PLUG_TYPE_ANC_HEADPHONE:
+#ifdef CONFIG_ZTEMT_AUDIO
+		WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_BTN_ISRC_CTL, 0);
+		mbhc->mbhc_cb->mbhc_micbias_control(mbhc->codec, MIC_BIAS_2,
+			MICB_PULLUP_ENABLE);
+#else
 		if (!mbhc->is_hs_recording && !micbias2)
 			WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_BTN_ISRC_CTL, 3);
+#endif
 		break;
 	default:
 		WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_BTN_ISRC_CTL, 0);
@@ -1179,7 +1209,11 @@ static void wcd_correct_swch_plug(struct work_struct *work)
 		if (!btn_result && !hs_comp_res)
 			plug_type = MBHC_PLUG_TYPE_HEADSET;
 		else if (!btn_result && hs_comp_res)
+#ifdef CONFIG_ZTEMT_AUDIO
+			plug_type = MBHC_PLUG_TYPE_HEADSET;
+#else
 			plug_type = MBHC_PLUG_TYPE_HIGH_HPH;
+#endif
 		else
 			plug_type = MBHC_PLUG_TYPE_INVALID;
 	} else {
@@ -1337,7 +1371,11 @@ correct_plug_type:
 		WCD_MBHC_REG_READ(WCD_MBHC_MIC_SCHMT_RESULT, mic_sch);
 		if (hs_comp_res && !(hphl_sch || mic_sch)) {
 			pr_debug("%s: cable is extension cable\n", __func__);
+#ifdef CONFIG_ZTEMT_AUDIO
+			plug_type = MBHC_PLUG_TYPE_HEADSET;
+#else
 			plug_type = MBHC_PLUG_TYPE_HIGH_HPH;
+#endif
 			wrk_complete = true;
 		} else {
 			pr_debug("%s: cable might be headset: %d\n", __func__,
@@ -1430,7 +1468,9 @@ exit:
 	     (plug_type == MBHC_PLUG_TYPE_HEADSET)) &&
 	    !mbhc->hs_detect_work_stop) {
 		WCD_MBHC_RSC_LOCK(mbhc);
+#ifndef CONFIG_ZTEMT_AUDIO
 		wcd_mbhc_hs_elec_irq(mbhc, WCD_MBHC_ELEC_HS_REM, true);
+#endif
 		WCD_MBHC_RSC_UNLOCK(mbhc);
 	}
 	if (mbhc->mbhc_cb->set_cap_mode)
@@ -1540,6 +1580,10 @@ static void wcd_mbhc_swch_irq_handler(struct wcd_mbhc *mbhc)
 		/* Disable HW FSM */
 		WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_FSM_EN, 0);
 		WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_BTN_ISRC_CTL, 0);
+#ifdef CONFIG_ZTEMT_AUDIO
+		mbhc->mbhc_cb->mbhc_micbias_control(mbhc->codec, MIC_BIAS_2,
+			MICB_PULLUP_DISABLE);
+#endif
 		if (mbhc->mbhc_cb->mbhc_common_micb_ctrl)
 			mbhc->mbhc_cb->mbhc_common_micb_ctrl(codec,
 					MBHC_COMMON_MICB_TAIL_CURR, false);
@@ -1987,6 +2031,9 @@ static irqreturn_t wcd_mbhc_release_handler(int irq, void *data)
 	 * headset not headphone.
 	 */
 	if (mbhc->current_plug == MBHC_PLUG_TYPE_HEADPHONE) {
+#ifdef CONFIG_ZTEMT_AUDIO
+		wcd_mbhc_report_plug(mbhc, 0, SND_JACK_HEADPHONE);
+#endif
 		wcd_mbhc_find_plug_and_report(mbhc, MBHC_PLUG_TYPE_HEADSET);
 		goto exit;
 
@@ -2120,9 +2167,11 @@ static int wcd_mbhc_initialise(struct wcd_mbhc *mbhc)
 	/* Button Debounce set to 16ms */
 	WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_BTN_DBNC, 2);
 
+#ifndef CONFIG_ZTEMT_AUDIO
 	/* Enable micbias ramp */
 	if (mbhc->mbhc_cb->mbhc_micb_ramp_control)
 		mbhc->mbhc_cb->mbhc_micb_ramp_control(codec, true);
+#endif
 	/* enable bias */
 	mbhc->mbhc_cb->mbhc_bias(codec, true);
 	/* enable MBHC clock */
