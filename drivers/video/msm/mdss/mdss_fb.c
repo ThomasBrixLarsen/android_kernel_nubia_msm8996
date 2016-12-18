@@ -1543,6 +1543,11 @@ static void mdss_fb_scale_bl(struct msm_fb_data_type *mfd, u32 *bl_lvl)
 	(*bl_lvl) = temp;
 }
 
+#ifdef CONFIG_FRONT_CAMERA_FLASH
+struct msm_fb_data_type *zte_camera_mfd;
+extern int camera_lcd_bkl_handle(void);
+#endif
+
 /* must call this function from within mfd->bl_lock */
 void mdss_fb_set_backlight(struct msm_fb_data_type *mfd, u32 bkl_lvl)
 {
@@ -1561,6 +1566,10 @@ void mdss_fb_set_backlight(struct msm_fb_data_type *mfd, u32 bkl_lvl)
 	} else {
 		mfd->unset_bl_level = U32_MAX;
 	}
+
+#ifdef CONFIG_FRONT_CAMERA_FLASH
+	zte_camera_mfd = mfd;
+#endif
 
 	pdata = dev_get_platdata(&mfd->pdev->dev);
 
@@ -1584,7 +1593,12 @@ void mdss_fb_set_backlight(struct msm_fb_data_type *mfd, u32 bkl_lvl)
 			if (mfd->bl_level != bkl_lvl)
 				bl_notify_needed = true;
 			pr_debug("backlight sent to panel :%d\n", temp);
+#ifdef CONFIG_FRONT_CAMERA_FLASH
+			if (!camera_lcd_bkl_handle() || (0 == temp))
+			    pdata->set_backlight(pdata, temp);
+#else
 			pdata->set_backlight(pdata, temp);
+#endif
 			mfd->bl_level = bkl_lvl;
 			mfd->bl_level_scaled = temp;
 		}
@@ -1621,6 +1635,9 @@ void mdss_fb_update_backlight(struct msm_fb_data_type *mfd)
 			pdata->set_backlight(pdata, temp);
 			mfd->bl_level_scaled = mfd->unset_bl_level;
 			mfd->allow_bl_update = true;
+#ifdef CONFIG_FRONT_CAMERA_FLASH
+			zte_camera_mfd = mfd;
+#endif
 		}
 	}
 	mutex_unlock(&mfd->bl_lock);

@@ -189,6 +189,11 @@ enum msm_flash_cfg_type_t {
 	CFG_FLASH_OFF,
 	CFG_FLASH_LOW,
 	CFG_FLASH_HIGH,
+#ifdef CONFIG_FRONT_CAMERA_FLASH
+	CFG_LCD_BKL_NORM,
+	CFG_LCD_BKL_LOW,
+	CFG_LCD_BKL_HIGH,
+#endif
 };
 
 enum msm_ir_led_cfg_type_t {
