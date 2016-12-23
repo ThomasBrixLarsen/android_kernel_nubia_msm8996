@@ -1031,13 +1031,12 @@
 
 &i2c_8 { /* BLSP2 QUP2 */
 	nq@28 {
-		compatible = "nxp,pn54x";
+		compatible = "nxp,pn548";
 		reg = <0x28>;
-		nfc,irq_gpio = <&tlmm 9 0x00>;
-		nfc,ven_gpio = <&tlmm 12 0x00>;
-		nfc,firm_gpio = <&pm8994_gpios 7 0x00>;
-		qcom,nq-clkreq = <&pm8994_gpios 10 0x00>;
-		qcom,nq-esepwr = <&pm8994_gpios 12 0x00>;
+		nxp,pn544-irq = <&tlmm 9 0x00>;
+		nxp,pn544-ven = <&tlmm 12 0x00>;
+		nxp,pn544-fw-dwnld = <&pm8994_gpios 7 0x00>;
+		nxp,pn544-ese-pwr = <&pm8994_gpios 12 0x00>;
 		interrupt-parent = <&tlmm>;
 		qcom,clk-src = "BBCLK2";
 		interrupts = <9 0>;
