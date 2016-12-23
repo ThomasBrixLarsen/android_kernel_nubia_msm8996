@@ -1031,7 +1031,7 @@
 
 &i2c_8 { /* BLSP2 QUP2 */
 	nq@28 {
-		compatible = "nxp,pn548";
+		compatible = "nxp,pn54x";
 		reg = <0x28>;
 		nxp,pn544-irq = <&tlmm 9 0x00>;
 		nxp,pn544-ven = <&tlmm 12 0x00>;

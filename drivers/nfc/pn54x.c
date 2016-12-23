@@ -862,7 +862,7 @@ static int pn544_probe(struct i2c_client *client,
 	spin_lock_init(&pn544_dev->irq_enabled_lock);
 
 	pn544_dev->pn544_device.minor = MISC_DYNAMIC_MINOR;
-	pn544_dev->pn544_device.name = "pn548";
+	pn544_dev->pn544_device.name = "pn544";
 	pn544_dev->pn544_device.fops = &pn544_dev_fops;
 
 	ret = misc_register(&pn544_dev->pn544_device);
@@ -929,13 +929,13 @@ static int pn544_remove(struct i2c_client *client)
 }
 
 static const struct i2c_device_id pn544_id[] = {
-		{ "pn548", 0 },
+		{ "pn544", 0 },
 		{ }
 };
 
 static struct of_device_id pn544_i2c_dt_match[] = {
 	{
-		.compatible = "nxp,pn548",
+		.compatible = "nxp,pn54x",
 	},
 	{}
 };
@@ -945,7 +945,7 @@ static struct i2c_driver pn544_driver = {
 		.probe      = pn544_probe,
 		.remove     = pn544_remove,
 		.driver     = {
-				.name  = "pn548",
+				.name  = "pn54x",
 				.owner = THIS_MODULE,
 				.of_match_table = pn544_i2c_dt_match,
 		},
